@@ -1,0 +1,23 @@
+body{
+	margin: 0px;
+	padding:0px;
+}
+
+#loader{
+	height: 1500px;
+	width:1500px;
+	background-color: grey;
+	opacity: 0.5;
+	position: fixed;
+	top:50%;
+	left:50%;
+	transform: translate(-50%,-50%);
+	z-index: 999;
+}
+
+#loader img{
+	position: absolute;
+	top: 50%;
+	left:50%;
+	transform: translate(-50%,-50%);
+}

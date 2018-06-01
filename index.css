@@ -1,0 +1,113 @@
+body
+{
+	/*background-image: url("2.jpg");*/
+	background-repeat: no-repeat;
+	opacity: 1;
+
+
+}
+
+input{
+ width: 150px;
+ position: absolute;
+ right: 600px;
+ bottom:400px;
+ background: url(calendar-128.png) no-repeat scroll 5px 5px;
+ height: 170px;
+ -webkit-border-radius: 1px;
+ -moz-border-radius: 1px;
+  border-radius: 1px;
+  border: 0px solid #999;
+
+}
+
+
+
+
+#month{
+
+width: 150px;
+ position: absolute;
+ right: 565px;
+ bottom: 550px;
+ color: black;
+ font-style: oblique;
+
+}
+
+
+#chart{
+
+	position: absolute;
+	 bottom: 100px;
+	  right: 250px;
+
+}
+
+#d{
+	position: absolute;
+	 bottom: 70px;
+	  right: 600px;/*
+	  font-family: monospace;*/
+	  font-size: 15px
+
+
+}
+
+#total{
+
+	position: absolute;
+	 bottom: 40px;
+	  right: 800px;
+	  font-family: monospace;
+	  font-size: 15px
+
+}
+
+#count{
+
+	position: absolute;
+	 bottom: 40px;
+	  right: 770px;
+	  font-family: monospace;
+	  font-size: 15px
+
+
+
+}
+
+
+
+
+body{
+	margin: 0px;
+	padding:0px;
+}
+
+#loader{
+	height: 1500px;
+	width:1500px;
+	background-color: grey;
+	opacity: 0.5;
+	position: fixed;
+	top:50%;
+	left:50%;
+	transform: translate(-50%,-50%);
+	z-index: 999;
+	transition: all .5s
+}
+
+#loader img{
+	position: absolute;
+	top: 50%;
+	left:50%;
+	transform: translate(-50%,-50%);
+}
+
+/*#corn{
+background: color url("2.jpg") others;
+
+
+}
+
+*/

@@ -1,0 +1,337 @@
+<html>
+<head>
+
+<script src="https://www.gstatic.com/firebasejs/5.0.3/firebase.js"></script>
+
+
+<script type="text/javascript">
+	var config = {
+    apiKey: "AIzaSyDyjWDq5oqbUQ181_YGi4TylTO8hlB98cs",
+    authDomain: "sample-da149.firebaseapp.com",
+    databaseURL: "https://sample-da149.firebaseio.com",
+    projectId: "sample-da149",
+    storageBucket: "sample-da149.appspot.com",
+    messagingSenderId: "848704810717"
+  };
+  firebase.initializeApp(config);
+
+</script>
+
+
+
+
+
+
+ <link rel="shortcut icon" href="http://www.farmharvest.in//img/favicon.png"/>
+
+  <link rel="stylesheet" href="index.css">
+
+ <script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+
+
+<img src="http://www.farmharvest.in//img/logo.png"></img>
+<img align="right" src="protosem.png"></img>
+
+
+
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://d3js.org/d3.v3.js"></script>
+
+
+<style>
+    .ui-datepicker-calendar {
+        display: none;
+    }
+    </style>
+
+
+	<title>FarmHarvest</title>
+	<script type="text/javascript"></script>
+
+</head>
+<body>
+<div>
+	
+    <input name="startDate" id="startDate" class="date-picker" />
+
+	</div>
+
+	<p id ="month">Click Here</p>
+	<p id="total"></p>
+	<p id="count"></p>
+	<p id="d"></p>
+	<div style="background-image: url(); height: 400px; width: 1400px ">
+		
+
+	</div>
+
+
+<div id ="loader">
+	<img src="ajax-loader.gif" width="2%"/>
+	
+
+</div>
+
+
+<div id='chart'></div>
+
+
+<script type="text/javascript">
+	var loader = document.getElementById("loader");
+
+window.addEventListener("load",function(){
+	loader.style.visibility = "hidden"
+})
+
+
+	$(function() {
+            $('.date-picker').datepicker( {
+            changeMonth: true,
+            changeYear: true,
+            showButtonPanel: true,
+            dateFormat: 'MM yy',
+            onClose: function(dateText,inst) { 
+
+loader.style.visibility = "visible"
+                
+                BarChart(inst)
+                       
+            }
+            });
+        });
+
+
+
+
+function BarChart(d)
+{
+var monthsDict=["Jan","Feb","Mar","Apr","May","Jun","July","Aug","Sep","Oct","Nov","Dec"]
+
+var Month =  monthsDict[d.selectedMonth]
+var Year = d.selectedYear
+
+  document.getElementById("month").innerHTML=Month+" "+Year
+
+	var list=[];
+
+
+
+var ref = firebase.database().ref().child("FarmHarvest/");
+ref.on('value',function(data)
+{
+      var inst = data.val();
+          
+      var keys = Object.keys(inst);
+      for(j=1;j<32;j++)
+      {
+        var count = 0;
+
+      for (var i = 0; i< keys.length; i++)
+      {
+          var k = keys[i];
+          var time = inst[k].Time;
+          var city = inst[k].city;
+
+          var d = time.slice(8,10);
+            
+          var year =time.slice(11,15);
+          var month = time.slice(4,7);  
+
+          var date = month+" "+d+" "+year;
+          if(j<10)
+          {
+          var Dat = Month+" "+"0"+j+" "+Year;
+        }
+        else{
+        	 var Dat = Month+" "+j+" "+Year;
+        }
+        
+
+          if(date === Dat)
+          {
+            count = count + 1;
+          }
+        }
+       list.push(count);
+      }
+
+   
+   var data = list;
+   list = [];
+ var c=0;
+for(i=0;i<31;i++)
+{
+	if(data[i]>0){
+		 c = c+1
+	}
+}
+
+
+if(c===0)
+
+   {
+   	window.alert("Sorry..\nNo data available")
+   	loader.style.visibility="hidden"
+   	exit()
+   }
+   console.log(data);
+
+   var sum = eval(data.join('+'))
+   document.getElementById('count').innerHTML = sum
+   document.getElementById('d').innerHTML = "Date of the month"
+   document.getElementById('total').innerHTML = "Total pops this month :"
+
+
+
+
+   var margin = {
+   	top: 30,
+   	right:30,
+   	bottom:40,
+   	left:50
+   }
+   
+
+
+   var height = 400 - margin.top - margin.bottom;
+var width = 900 -margin.left - margin.right;
+
+var tooltip = d3.select('body').append('div')
+				.style('position','absolute')
+				.style('background','#f4f4f4')
+				.style('padding','10 15px')
+				.style('border','1px #333 solid')
+				.style('border-radius','5px')
+				.style('opacity','0')
+
+var yScale = d3.scale.linear()
+                .domain([0, d3.max(data)])
+                .range([0,height]);
+
+
+var xScale =  d3.scale.ordinal()
+                .domain(d3.range(0,data.length))
+                .rangeBands([0,width]);
+
+
+var colors = d3.scale.linear()
+			   .domain([0,data.length])
+			   .range(['#a9c625','#a9c625'])
+
+var myChart = d3.select('#chart').append('svg')
+			  .attr('width',width + margin.right + margin.left)
+			  .attr('height',height+ margin.top + margin.bottom )
+			  .append('g')
+			  .attr('transform','translate('+margin.left+','+margin.top+')')
+			  .style('background','#f4f4f4')
+			  .selectAll('rect')
+			     .data(data)
+			     .enter().append('rect')
+			         .style('fill',function(d, i){
+			         	return colors(i);
+			         })
+			         .attr('width',xScale.rangeBand())
+			         .attr('height',0)
+			         .attr('x',function(d, i){
+			         	return xScale(i); 
+			         })
+			         .attr('y',height)
+
+
+
+			  .on('mouseover',function(d){
+			  	tooltip.transition()
+			  	.style('opacity',1)
+
+			  	tooltip.html(d)
+			  		   .style('left',(d3.event.pageX)+'px')
+			  		    .style('top',(d3.event.pageY)+'px')
+			  		    d3.select(this).style('opacity',0.5)			  		   
+			  })
+			  .on('mouseout',function(d){
+			  	tooltip.transition()
+			  	.style('opacity', 0)
+			  	d3.select(this).style('opacity',1)
+			  })
+     
+loader.style.visibility="hidden"
+
+    myChart.transition()
+    		.attr('height',function(d){
+    			return yScale(d);
+    		})
+    		.attr('y', function(d){
+    			return height - yScale(d)
+    		})
+    		.duration(5000)
+    		.delay(function(d, i){
+    			return i * 5
+    		})
+    		.ease('elastic')
+
+
+var vScale = d3.scale.linear()
+                .domain([0, d3.max(data)])
+                .range([height,0]);
+
+
+var hScale =  d3.scale.ordinal()
+                .domain(d3.range(1,data.length+1))
+                .rangeBands([0,width]);
+
+
+
+        var vAxis = d3.svg.axis()
+        			  .scale(vScale)
+        			  .orient('left')
+        			  .ticks(10)
+        			  .tickPadding(2)
+        var vGuide = d3.select('svg')
+        				.append('g')
+        					vAxis(vGuide)
+        					vGuide.attr('transform','translate('+margin.left+','+margin.top+')')
+        					vGuide.selectAll('path')
+        							.style('fill','none')
+        							.style('stroke','#000')
+        						vGuide.selectAll('line')
+        							.style('stroke','#000')
+
+
+         var hAxis = d3.svg.axis()
+        			  .scale(hScale)
+        			  .orient('bottom')
+        			  .ticks(10)
+        			  .tickPadding(2)
+
+        var hGuide = d3.select('svg')
+        				.append('g')
+        					hAxis(hGuide)
+        					hGuide.attr('transform','translate('+margin.left+','+(height+margin.top)+')')
+        					hGuide.selectAll('path')
+        							.style('fill','none')
+        							.style('stroke','#000')
+        						hGuide.selectAll('line')
+        							.style('stroke','#000')
+
+
+
+});
+
+
+
+
+
+}
+
+
+</script>
+
+	
+
+
+
+</body>
+</html>
