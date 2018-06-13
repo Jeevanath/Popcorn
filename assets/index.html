@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+	<style>
+    .ui-datepicker-calendar {
+        display: none;
+    }
+    </style>
+	<title>FarmHarvest</title>
+
+
+	<!--  <link rel="shortcut icon" href="http://www.farmharvest.in//img/favicon.png"/>
+	 <img src="http://www.farmharvest.in//img/logo.png"></img>
+	<img align="right" src="protosem.png"></img> -->
+
+	<script src="https://code.jquery.com/jquery-1.12.4.js"></script>
+  <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+
+</head>
+<body>
+
+<div style="position: absolute; left: 600px; bottom: 500px;" align="center">
+<br><input type="image" src="calendar.png"  name="image" width="" height="60" class="date-picker"><br>
+
+</div>
+
+
+<script type="text/javascript">
+	
+$(function() {
+            $('.date-picker').datepicker( {
+            changeMonth: true,
+            changeYear: true,
+            showButtonPanel: true,
+            dateFormat: 'MM yy',
+            onClose: function(dateText,inst) { 
+console.log(inst)
+
+window.location.replace("data.html");
+sessionStorage.setItem("inst", JSON.stringify(inst));
+                
+                       
+            }
+            });
+        });
+
+</script>
+
+
+
+</body>
+</html>

@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  
+  <meta charset=utf-8 />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+  <title>FarmHarvest</title>
+
+
+
+  <script src='https://api.tiles.mapbox.com/mapbox.js/v2.1.5/mapbox.js'></script>
+  <link href='https://api.tiles.mapbox.com/mapbox.js/v2.1.5/mapbox.css' rel='stylesheet' />
+
+    <style>
+
+        body { 
+            margin:0; padding:0; 
+        }
+
+        .map { 
+            position: absolute; 
+            top:0; 
+            bottom:0;
+            width: 1280px;
+            height: 707px;
+            z-index: 0;
+        }
+
+        .map-legend i {
+            width: 18px;
+            height: 18px;
+            float: left;
+            margin-right: 8px;
+            opacity: 0.7;
+            z-index: 0;
+        }
+        .leaflet-popup-close-button {
+            display: none;
+        }
+        .leaflet-popup-content-wrapper {
+            pointer-events: none;
+        }
+
+       .bar-graph {
+
+            width: 250px;
+            height: 250px;
+            
+            border: thin solid grey;
+            background: black;
+            opacity: 1;
+            text-align: center;
+        }
+
+        .filter-ui {
+            background: black;
+            color: white;
+            position:absolute;
+            top: 50px;
+            left: 100px;
+            z-index: 2;
+            padding: 10px;
+            border: thin solid grey;
+            border-radius:3px;
+        }
+
+        .icon-bar {
+            width: 90px;
+            background-color: #555;
+            position: absolute;
+            right:768px;
+            bottom:2px;
+        
+                }
+
+         .icon-bar a {
+            display: block;
+            text-align: center;
+            padding: 16px;
+            transition: all 0.3s ease;
+            color: white;
+            font-size: 36px;
+                }
+
+        .icon-bar a:hover {
+            background-color: #000;
+                }
+
+        .active {
+            background-color: #4CAF50 !important;
+                }
+
+
+
+        
+        
+
+    </style>
+
+</head>
+
+<body>
+    
+
+
+
+<nav id='citys-filter-div' class='filter-ui'>
+    <div>
+        <input type="checkbox" checked="checked" id="citys-filter">
+        <label for="citys">Show cities</label>
+    </div>
+
+<nav  class="icon-bar">
+  <a class="active" href="http://localhost:8888/map.html"><i class="fa fa-globe"></i></a> 
+  <a href="#"><i class="fa fa-calendar"></i></a>
+</nav>
+
+
+</nav>
+
+<div id='map' class='map'>
+
+
+
+ </div>
+
+<script id="popup-template" type="text/template">
+    <h2>{{state}}</h2>
+    
+    <strong>{{pops}}</strong> no of pops <br>
+</script>
+
+<!-- <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script> -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.5/d3.min.js"></script>
+<script type="text/javascript" src="census-2011.js"></script>
+
+
+
+
+
+
+<script>
+     var loc = window.location;
+
+        var ws_url;
+        if (loc.protocol === "https:") {
+            ws_url = "wss:";
+        } else {
+            ws_url = "ws:";
+        }
+        ws_url += "//" + loc.host;
+        ws_url += loc.pathname + "/to/ws";
+
+        console.log(ws_url)
+
+        var ws = new WebSocket(ws_url);
+        ws.onopen = function(evt) {
+            console.log('websockets connected to server');
+            ws.send('hello from client');
+}
+
+        ws.onmessage = function (evt) {
+            var msg = JSON.parse(evt.data);
+            console.log("Message received:", msg);
+            var tot = eval(msg.f_data.join('+'));
+
+
+      indiaCensus.states.TN.city.details[0].pops = tot
+      indiaCensus.states.TN.pops = tot + 380
+              
+             L.mapbox.accessToken = 'pk.eyJ1IjoiaW5pdGRvdCIsImEiOiJ3VkkxTldvIn0.7UPZ8q9fgBE70dMV7e0sLw';
+
+           var map = L.mapbox.map('map', 'initdot.ljplbdcp').setView([21.836006, 87.824707], 5),
+        // color reference from color brewer
+        mapBrew = ['rgb(255,255,204)','rgb(217,240,163)','rgb(173,221,142)','rgb(120,198,121)','rgb(65,171,93)','rgb(35,132,67)','rgb(0,90,50)'],
+        // population pops range used for choropleth and legend
+        mapRange = [ 500, 100, 80, 50, 30, 10, 0 ]; 
+
+    // map legend for population pops
+    var legend = L.mapbox.legendControl( { position: "bottomleft" } ).addLegend( getLegendHTML() ).addTo(map),
+        // popup for displaying state census details
+        popup = new L.Popup({ autoPan: false, className: 'statsPopup' }),
+        // layer for each state feature from geojson
+        statesLayer,
+        closeTooltip;
+
+    // fetch the state geojson data
+    d3.json( "http://localhost:8888/india-states.json", function (statesData) {
+
+        statesLayer = L.geoJson(statesData,  {
+            style: getStyle,
+            onEachFeature: onEachFeature
+        }).addTo(map);
+
+    } );
+
+
+    function getStyle(feature) {
+
+
+        return {
+            weight: 2,
+            opacity: 0.21,
+            color: 'black',
+            fillOpacity: 0.85,
+            fillColor: getpopsColor( indiaCensus.states[feature.properties.code].pops )
+        };
+    }
+
+    // get color depending on population pops value
+    function getpopsColor(d) {
+        var colors = Array.prototype.slice.call(mapBrew).reverse(), // creates a copy of the mapBrew array and reverses it
+             range = mapRange;
+
+        return  d > range[0] ? colors[0] :
+                d > range[1] ? colors[1] :
+                d > range[2] ? colors[2] :
+                d > range[3] ? colors[3] :
+                d > range[4] ? colors[4] :
+                d > range[5] ? colors[5] :
+                colors[6];
+    }
+
+    function onEachFeature(feature, layer) {
+        layer.on({
+            mousemove: mousemove,
+            mouseout: mouseout,
+            //click: zoomToFeature
+        });
+    }
+
+    function mousemove(e) {    
+        var layer = e.target;
+
+        var popupData = {
+            state: indiaCensus.states[layer.feature.properties.code].name,
+            pops: indiaCensus.states[layer.feature.properties.code].pops 
+        };
+
+        popup.setLatLng(e.latlng);
+
+        var popContent = L.mapbox.template( d3.select("#popup-template").text() , popupData );
+        popup.setContent( popContent );
+
+        if (!popup._map) popup.openOn(map);
+        window.clearTimeout(closeTooltip);
+
+        // highlight feature
+        layer.setStyle({
+            weight: 2,
+            opacity: 0.3,
+            fillOpacity: 0.9
+        });
+
+        if (!L.Browser.ie && !L.Browser.opera) {
+            layer.bringToFront();
+        }
+        // update the graph with Pop and sex ratio data
+        updateGraph( indiaCensus.states[layer.feature.properties.code] );
+
+    }
+
+    function mouseout(e) {
+        statesLayer.resetStyle(e.target);
+        closeTooltip = window.setTimeout(function() {
+            // ref: https://www.mapbox.com/mapbox.js/api/v2.1.6/l-map-class/
+            map.closePopup( popup ); // close only the state details popup
+        }, 100);
+    }
+
+    function zoomToFeature(e) {
+        map.fitBounds(e.target.getBounds());
+    }
+
+    function getLegendHTML() {
+        var grades = Array.prototype.slice.call(mapRange).reverse(), // creates a copy of ranges and reverses it
+            labels = [],
+            from, to;
+        // color reference from color brewer
+        var brew = mapBrew;
+
+        for (var i = 0; i < grades.length; i++) {
+            from = grades[i];
+            to = grades[i + 1];
+
+            labels.push(
+                '<i style="background:' + brew[i] + '"></i> ' +
+                from + (to ? '&ndash;' + to : '+'));
+        }
+
+        return '<span>Sales count</span><br>' + labels.join('<br>');
+    }
+
+    // ref: https://www.mapbox.com/mapbox.js/api/v2.1.6/l-icontrol/
+    
+
+    var BarGraphControl = L.Control.extend({   
+        options: {
+            position: 'bottomright'
+        },
+
+        onAdd: function (map) {
+            // create the control container with a particular class name
+            var container = L.DomUtil.create('div', 'bar-graph');
+            // ... initialize other DOM elements, add listeners, etc.
+            return container;
+        }
+    });
+
+    // add the piegraph and bar graph container
+    map.addControl( new BarGraphControl() );
+
+    
+
+    // START: Bar Graph (Pop)
+    var barWidth = 250,
+        barHeight = 180,
+        barSize = 50,
+        // attach the Pop data for 'Delhi' initially
+        Data = [ 0 ];
+
+    var barName = d3.select(".bar-graph")
+                        .append("div")
+                    .text("Chennai")
+                    .style("color", "white")
+                    .style("font-size", "15px")
+                    .style("font-weight", "bold")
+                    .style("margin", "6px 0");
+
+    var barHolder = d3.select(".bar-graph")
+                            .append("svg")
+                        .attr("id", "Pop-bar")
+                        .attr("width", barWidth)
+                        .attr("height", barHeight)
+                            .append("rect")
+                        .attr("width", barSize)
+                        .attr("height", barHeight)
+                        .attr("x", (barWidth-barSize)/2)
+                        .style("color", getBarColor( Data[0] ) );
+
+    var barLegend = d3.select(".bar-graph")
+                            .append("div")
+                        .style("color", "white")
+                        .style("font-weight", "bold")
+                        .style("font-size", "15px")
+                        .text("Pops: ")
+                            .append("span")
+                        .attr("id", "count")
+                        .text(Data[0])
+                        .style("color", getBarColor( Data[0] ) );
+
+    var litBar = d3.select("#Pop-bar").selectAll("rect")
+                        .data( Data )
+                        .attr("height", function(d) {
+                            var h = barHeight*(d/100);
+                            return h;
+                        })
+                        .attr("y", function(d) {
+                            var h = barHeight*(d/100),
+                                nh = barHeight - h;
+                            return nh;
+                        })
+                        .style("fill",  function(d) { return getBarColor(d); } );
+    // END: Bar Graph (Pop)
+
+    // START: Updates both Pie Graph and Bar Graph
+    function updateGraph ( graphData ) {
+      
+
+        // Update Bar Graph
+        barName.text( graphData.name );
+
+        Data = [];
+        Data.push( +graphData.pops );
+
+        d3.select("#Pop-bar").selectAll("rect")
+                        .data( Data )
+                        .transition().duration(200)
+                        .attr("height", function(d) {
+                            var h = barHeight*(d/500);
+                           
+                            return h;
+                        })
+                        .attr("y", function(d) {
+                            var h = barHeight*(d/500),
+                                nh = barHeight - h;
+                            return nh;
+                        })
+                        .style("fill",  function(d) { return getBarColor(d); } );
+
+        barLegend.text( graphData.pops)
+                .transition().duration(500)
+                .style("color", getBarColor(+graphData.pops) );
+    }// END: updateChart()
+
+    function getBarColor (Pop) {
+        // color from colorbrew
+        var PopBrew = ['rgb(215,25,28)','rgb(253,174,97)','rgb(166,217,106)','rgb(26,150,65)'].reverse(),
+            PopRange = [ 400, 100, 50, 10];
+
+        Pop = +Pop;
+
+        return Pop > PopRange[0] ? PopBrew[0] : 
+                Pop > PopRange[1] ? PopBrew[1] :
+                Pop > PopRange[2] ? PopBrew[2] :
+                PopBrew[3];
+    }
+
+    // draw the layer with city markers
+    var cityLayer;
+
+    drawcityMarkers();
+
+    // add the citys toggle checkbox
+    var cityFilter = document.getElementById("citys-filter"),
+        cityFilterDiv = document.getElementById("citys-filter-div");
+
+    cityFilter.addEventListener("change", function(){
+        this.checked ? map.addLayer(cityLayer) : map.removeLayer(cityLayer);
+    });
+
+    setcityFilterPosition();
+
+    function drawcityMarkers () {
+        var cityGeoJson = [];
+    
+
+        for (var state in indiaCensus.states) {
+        
+            var cityData = indiaCensus.states[state];
+            // city marker geojson data            
+            
+
+            cityData.city.details.forEach( function ( city,pops ) {
+                // location is normally in (latitude, longitude) format
+                // but for geojson the format is  (longitude, latitude)
+                if(city.coordinates){
+                cityGeoJson.push({
+                    "type": "Feature",
+                    "geometry": {
+                      "type": "Point",
+                      // make an array copy and reverse the co-ordinates to (long,lat) for geojson
+                      "coordinates": Array.prototype.slice.call(city.coordinates).reverse()  
+                    },
+                    "properties": {
+                      "title": city.name,
+                      "description": city.pops ? "<strong>Pops: </strong>" + city.pops : "(pops data not available)",
+                      "data": city,
+                      "marker-color": "#ffb90f",
+                      "marker-size": "small",
+                      "marker-symbol": "garden"
+                    }
+
+
+                });
+            }
+            } ); // end of 'forEach'
+        } // end of 'for in'
+
+        // add the marker layer
+        cityLayer = L.mapbox.featureLayer( cityGeoJson ).addTo( map );
+        // open the popup on hover
+        cityLayer.on('mouseover', function(e) {      
+            e.layer.openPopup();
+            // update the graph if census details is present
+         
+         updateGraphp(e.layer.feature.properties.data)
+        });
+
+        cityLayer.on('click',function(e){
+            sessionStorage.setItem("e",JSON.stringify(e.layer.feature.properties.data));
+            // console.log(sessionStorage.getItem("e"))
+            window.location.replace('http://localhost:8080/data.html')
+        });
+
+        cityLayer.on('mouseout', function(e) {
+            e.layer.closePopup();
+        });
+    }   
+
+    function setcityFilterPosition () {
+        var gistWidth = 960,
+            gistHeight = 707; 
+        cityFilterDiv.style.top = 0.5*gistHeight + "px";
+        cityFilterDiv.style.left = 0.78*gistWidth + "px";
+        // adjust the defalut gist preview height
+        d3.select(self.frameElement).style("height", gistHeight + "px");
+    }
+
+function updateGraphp(data) {
+    
+
+
+
+
+
+        // Update Bar Graph
+        barName.text( data.name );
+
+        Data = [];
+        Data.push( data.pops );
+
+        d3.select("#Pop-bar").selectAll("rect")
+                        .data( Data )
+                        .transition().duration(200)
+                        .attr("height", function(d) {
+                            var h = barHeight*(d/500);
+                           
+                            return h;
+                        })
+                        .attr("y", function(d) {
+                            var h = barHeight*(d/500),
+                                nh = barHeight - h;
+                            return nh;
+                        })
+                        .style("fill",  function(d) { return getBarColor(d); } );
+
+        barLegend.text( data.pops)
+                .transition().duration(500)
+                .style("color", getBarColor(data.pops) );
+    }
+
+
+            
+          
+        };
+
+        
+
+            
+           
+      
+
+
+
+
+
+
+
+    
+
+    
+
+
+    
+
+
+
+</script>
+
+
+
+</body>
+</html>
